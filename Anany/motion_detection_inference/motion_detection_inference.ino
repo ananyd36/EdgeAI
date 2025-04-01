@@ -1,36 +1,26 @@
+#include <Adafruit_MPU6050.h>
 #include <Wire.h>
-#include <MPU6050.h>
 #include <anany_36-project-1_inferencing.h>
 #include <GyverOLED.h>
 
-MPU6050 mpu;
+Adafruit_MPU6050 mpu;
 GyverOLED<SSH1106_128x64> display;
 
-// Create a buffer for the features (size should match the number of features your model expects)
+#define FREQUENCY_HZ 50                         
+#define INTERVAL_MS (1000 / (FREQUENCY_HZ + 1))  
+
+
 float features[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
+size_t feature_ix = 0;                               
+
 
 // Variables for label tracking
+static unsigned long last_interval_ms = 0;
 unsigned long labelStartTime = 0;
 String currentLabel = "";
 String lastLabel = "";
 const unsigned long thresholdTime = 2000; 
 
-void readAccelerometerData() {
-    int16_t ax, ay, az;
-    mpu.getAcceleration(&ax, &ay, &az);
-
-    for (size_t ix = 0; ix < EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE; ix += 3) {
-        features[ix] = ax;
-        features[ix + 1] = ay;
-        features[ix + 2] = az;
-        delay(10); // Assuming 100 Hz sampling
-    }
-}
-
-int raw_feature_get_data(size_t offset, size_t length, float *out_ptr) {
-    memcpy(out_ptr, features + offset, length * sizeof(float));
-    return 0;
-}
 
 void setup() {
     Serial.begin(115200);
@@ -38,32 +28,47 @@ void setup() {
 
     // Initialize the MPU6050 sensor
     Wire.begin();
-    mpu.initialize();
+    mpu.begin();
     display.init();
+    mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+    mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+    mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);  
+
+
 
     Serial.println("Edge Impulse Inferencing Demo");
 }
 
 void loop() {
-    readAccelerometerData();
+  sensors_event_t a, g, temp;  // Structs for sensor data
 
-    ei_printf("Edge Impulse standalone inferencing (Arduino)\n");
+  // Check if it's time for the next sample
+  if (millis() > last_interval_ms + INTERVAL_MS) {
+    last_interval_ms = millis();  // Update timer
 
-    if (sizeof(features) / sizeof(float) != EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE) {
-        ei_printf("The size of your 'features' array is not correct. Expected %lu items, but had %lu\n",
-                  EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, sizeof(features) / sizeof(float));
-        delay(1000);
+    mpu.getEvent(&a, &g, &temp);  // Get sensor data
+
+    // Add acceleration data to the features buffer
+    features[feature_ix++] = a.acceleration.x;
+    features[feature_ix++] = a.acceleration.y;
+    features[feature_ix++] = a.acceleration.z;
+
+    // If buffer is full, perform inference
+    if (feature_ix == EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE) {
+      Serial.println("Running the inference...");
+      signal_t signal;
+      ei_impulse_result_t result;
+
+      // Convert features to a signal for inferencing
+      int err = numpy::signal_from_buffer(features, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
+      if (err != 0) {
+        ei_printf("Failed to create signal from buffer (%d)\n", err);
         return;
-    }
+      }
 
-    ei_impulse_result_t result = { 0 };
-
-    signal_t features_signal;
-    features_signal.total_length = sizeof(features) / sizeof(features[0]);
-    features_signal.get_data = &raw_feature_get_data;
-
-    // Run the classifier with the accelerometer data
-    EI_IMPULSE_ERROR res = run_classifier(&features_signal, &result, false /* debug */);
+      // Run classification
+      EI_IMPULSE_ERROR res = run_classifier(&signal, &result, true);
+      if (res != 0) return;
 
     if (res != EI_IMPULSE_OK) {
         ei_printf("ERR: Failed to run classifier (%d)\n", res);
@@ -72,12 +77,7 @@ void loop() {
 
 
     ei_printf("run_classifier returned: %d\r\n", res);
-    print_inference_result(result);
 
-    delay(1000); // Delay to avoid spamming the serial monitor
-}
-
-void print_inference_result(ei_impulse_result_t result) {
     String newLabel = "";
     float highestProbability = 0.0;
 
@@ -112,4 +112,7 @@ void print_inference_result(ei_impulse_result_t result) {
     Serial.print(currentLabel);
     Serial.print(" | Most probable: ");
     Serial.println(newLabel);
+    feature_ix = 0;
+    }
+}
 }

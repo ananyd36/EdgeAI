@@ -73,9 +73,9 @@ void loop() {
   }
 
   // Display analog potentiometer value
-  display.setCursor(0, 10); // Set cursor to a new line to avoid overlap
+  display.setCursor(0, 1); // Set cursor to a new line to avoid overlap
   display.print("Pot Rotation: ");
-  display.print((potValue * 100.0) / 4095);
+  display.print(((4095 - potValue) * 100.0) / 4095);
   display.println("%");
   display.update();
 
