@@ -24,7 +24,7 @@ void setup() {
 // Function to read the potentiometer value and map it to a desired range (using float arithmetic)
 float readPotentiometer(float minVal, float maxVal) {
   float sensorValue = analogRead(POT_PIN);
-  float mappedValue = minVal + (sensorValue / ADC_MAX) * (maxVal - minVal);  // Correct mapping for ADC_MAX
+  float mappedValue = minVal + ((4095 - sensorValue) / ADC_MAX) * (maxVal - minVal);  // Correct mapping for ADC_MAX
   return mappedValue;
 }
 
