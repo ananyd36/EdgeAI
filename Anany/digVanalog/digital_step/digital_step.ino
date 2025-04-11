@@ -37,10 +37,10 @@ void drawStepFunction(bool leftSwitchState, bool rightSwitchState) {
     yCoordinate = SCREEN_HEIGHT - 20;
   }
     else if(level==2){
-    yCoordinate = SCREEN_HEIGHT - 30;
+    yCoordinate = SCREEN_HEIGHT - 20;
   }
     else{
-    yCoordinate = SCREEN_HEIGHT - 5;
+    yCoordinate = SCREEN_HEIGHT - 30;
   }
 
 

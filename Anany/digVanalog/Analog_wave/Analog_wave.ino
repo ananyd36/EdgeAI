@@ -9,10 +9,8 @@ GyverOLED<SSH1106_128x64> display;
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-// Potentiometer pin
 #define POT_PIN 27
 
-//ADC MAX VALUE DEPENDING ON YOUR BOARD
 #define ADC_MAX 4095.0
 
 void setup() {
