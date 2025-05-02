@@ -151,6 +151,7 @@ void loop()
 
          // print in beats per minute
          beatsPerMinute = peak * 60;
+         Serial.println(float(beatsPerMinute));
          oled.clear();
          oled.setScale(2);
          oled.setCursor(0, 0);  // Top-left
