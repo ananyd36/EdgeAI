@@ -20,7 +20,7 @@ GyverOLED<SSH1106_128x64> display;
 // --- Global Variable ---
 // Define the Y coordinate for the base digital level (both switches OFF)
 // and the center of the analog wave. Derived from the original digital code.
-const int BASE_Y_LEVEL = SCREEN_HEIGHT - 10;
+const int BASE_Y_LEVEL = SCREEN_HEIGHT - 15;
 
 void setup() {
   display.init();
@@ -81,15 +81,15 @@ void drawDigitalStep(bool leftState, bool rightState) {
 
   switch (level) {
     case 1:
-      yCoordinate = SCREEN_HEIGHT - 25; // Level 1 slightly higher than base
+      yCoordinate = SCREEN_HEIGHT - 15; // Level 1 slightly higher than base
       levelText = "LOW";
       break;
     case 2:
-      yCoordinate = SCREEN_HEIGHT - 40; // Level 2 higher
+      yCoordinate = SCREEN_HEIGHT - 25; // Level 2 higher
       levelText = "MID"; // Or just "HIGH" if only two levels used?
       break;
     case 3:
-      yCoordinate = SCREEN_HEIGHT - 55; // Level 3 highest
+      yCoordinate = SCREEN_HEIGHT - 35; // Level 3 highest
       levelText = "HIGH";
       break;
     default:
@@ -138,21 +138,12 @@ void loop() {
     display.setCursor(0, 0);
     display.print("Mode: Analog Wave");
     display.setCursor(0, 1); // Use second line for info
-    display.print("A:"); display.print(amplitude, 1); // 1 decimal place
-    display.setCursor(SCREEN_WIDTH / 2, 1); // Move cursor for Freq
-    display.print("F:"); display.print(frequency, 1); // 1 decimal place
+    display.print("Frequency: "); display.print(frequency, 1); display.print(" cycles"); // 1 decimal place
 
     // Draw the sine wave centered at the base digital level
     drawSineWave(amplitude, frequency, BASE_Y_LEVEL);
 
-    // Serial Debugging (Optional)
-    Serial.print("Analog - A: "); Serial.print(amplitude);
-    Serial.print(", F: "); Serial.println(frequency);
-
   } else {
-    // --- DIGITAL MODE: One or both switches pressed ---
-
-    // Draw the digital step function line and text
     drawDigitalStep(leftSwitchState, rightSwitchState);
 
     // Serial Debugging (Optional)

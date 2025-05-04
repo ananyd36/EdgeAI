@@ -1,10 +1,3 @@
-// Tinker Foundry
-// Heart Rate Measurement with the MAX30102 breakout board using FFT
-// Connections from WEMOS D1 R32 board to MAX30102 Breakout Board as follows:
-//  SCL (ESP32) to SCL (breakout board)
-//  SDA (ESP32) to SDA (breakout board)
-//  3V3 (ESP32) to VIN (breakout board)
-//  GND (ESP32) to GND (breakout board)
 
 #include <Wire.h>
 #include "MAX30105.h"    // sparkfun MAX3010X library
