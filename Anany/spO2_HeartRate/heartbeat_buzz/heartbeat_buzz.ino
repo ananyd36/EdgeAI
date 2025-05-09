@@ -30,6 +30,14 @@ double frate      = 0.95; // low pass filter for IR/red LED value to eliminate A
 #define FINGER_ON     30000 // if red signal is lower than this, it indicates your finger is not on the sensor
 #define USEFIFO
 #define PULSE_SAMPLES 256
+// Acknowledgments
+
+// Creator: Anany Sharma at the University of Florida working under NSF grant. 2405373
+
+// This material is based upon work supported by the National Science Foundation under Grant No. 2405373. 
+// Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the National Science Foundation.
+
+
 #define SAMPLE_FREQ   50
 
 // --- For Heart Rate / Buzzer Timing ---

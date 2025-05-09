@@ -1,3 +1,11 @@
+// Acknowledgments
+
+// Creator: Anany Sharma at the University of Florida working under NSF grant. 2405373
+
+// This material is based upon work supported by the National Science Foundation under Grant No. 2405373. 
+// Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the National Science Foundation.
+
+
 #include <Lab_7_motion_detection_v1_inferencing.h>
 #include <Adafruit_MPU6050.h>                 // Library to interact with the MPU6050 motion sensor
 #include <Adafruit_Sensor.h>                  // Unified sensor interface used by Adafruit libraries
