@@ -1,3 +1,11 @@
+// Acknowledgments
+
+// Creator: Anany Sharma at the University of Florida working under NSF grant. 2405373
+
+// This material is based upon work supported by the National Science Foundation under Grant No. 2405373. 
+// Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the National Science Foundation.
+
+
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Wire.h> // Needed for I2C communication
