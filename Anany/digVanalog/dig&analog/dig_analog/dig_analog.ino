@@ -2,76 +2,91 @@
 
 // Creator: Anany Sharma at the University of Florida working under NSF grant. 2405373
 
-// This material is based upon work supported by the National Science Foundation under Grant No. 2405373. 
+// This material is based upon work supported by the National Science Foundation under Grant No. 2405373.
 // Any opinions, findings, and conclusions or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the National Science Foundation.
 
+#include <Wire.h> 
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+#include <SPI.h>             // Required for SPI communication
+#include <math.h>            // Needed for plotting the sin graph
 
-#include <Wire.h>
-#include <GyverOLED.h>
-#include <math.h> // Needed for sin()
+// --- Display Pin Definitions ---
+#define TFT_CS   33  // Chip Select control pin
+#define TFT_DC    25  // Data/Command select pin
+#define TFT_RST   26  // Reset pin (or connect to RST, see below)
 
-// OLED display object
-GyverOLED<SSH1106_128x64> display;
 
-// Constants for the display
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
-// Input Pins
-#define POT_PIN 27        // Analog input for potentiometer
+// --- Display Constants (Adjusted for 320x170 landscape) ---
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 170
+
+// Input Pins (Assuming the same pins for ESP32)
+#define POT_PIN 32       // Analog input for potentiometer
 #define LEFT_SWITCH_PIN 36 // Digital input for left switch
 #define RIGHT_SWITCH_PIN 39 // Digital input for right switch
 
-// ADC Resolution (for ESP32 default)
 #define ADC_MAX 4095.0
 
 // --- Global Variable ---
 // Define the Y coordinate for the base digital level (both switches OFF)
-// and the center of the analog wave. Derived from the original digital code.
-const int BASE_Y_LEVEL = SCREEN_HEIGHT - 15;
+// Let's place it about 30 pixels from the bottom for better visibility on a taller screen.
+const int BASE_Y_LEVEL = SCREEN_HEIGHT - 30;
+
+// --- Colors (Using 16-bit color values) ---
+#define BLACK   0x0000
+#define WHITE   0xFFFF
+#define BLUE    0x001F
+#define GREEN   0x07E0
+#define RED     0xF800
 
 void setup() {
-  display.init();
   Serial.begin(115200);
+
+  // --- Display Initialization ---
+  tft.init(SCREEN_HEIGHT, SCREEN_WIDTH); // Initialize ST7789 with your resolution
+  tft.setRotation(3); 
+  tft.fillScreen(BLACK); // Clear the screen with black
 
   // Initialize inputs
   pinMode(POT_PIN, INPUT);
   pinMode(LEFT_SWITCH_PIN, INPUT_PULLUP); // Use internal pull-up resistor
   pinMode(RIGHT_SWITCH_PIN, INPUT_PULLUP); // Use internal pull-up resistor
 
-  display.clear();
-  display.setScale(1); // Use default text scale
-  display.print("Analog/Digital Demo");
-  display.update();
-  delay(1000);
+  tft.setCursor(0, 0);       // Set cursor to top-left
+  tft.setTextColor(WHITE); // Set text color to white
+  tft.setTextSize(2);        // Set text size
+  tft.println("Analog/Digital Demo");
+
+  delay(1000); // Display initial message for a moment
 }
 
 // Function to read the potentiometer value and map it to a desired range
 float readPotentiometer(float minVal, float maxVal) {
   float sensorValue = analogRead(POT_PIN);
-  // Map the ADC value (0-4095) to the desired range (minVal-maxVal)
-  // Handle potential inversion if needed based on wiring (assuming higher voltage = higher value here)
    float mappedValue = minVal + (sensorValue / ADC_MAX) * (maxVal - minVal);
-  // If your pot reads "backwards" (max value when you expect min), uncomment the line below
-  // float mappedValue = minVal + ((ADC_MAX - sensorValue) / ADC_MAX) * (maxVal - minVal);
   return mappedValue;
 }
 
 // Function to draw a sinusoidal wave centered at a specific Y coordinate
 // Amplitude here is the peak deviation from the center Y
 void drawSineWave(float amplitude, float frequency, int centerY) {
-  // Ensure amplitude isn't too large to go off-screen
-  if (amplitude > centerY) amplitude = centerY;
-  if (amplitude > (SCREEN_HEIGHT - 1 - centerY)) amplitude = SCREEN_HEIGHT - 1 - centerY;
-  if (amplitude < 1) amplitude = 1; // Minimum visible amplitude
+  int maxY = SCREEN_HEIGHT - 1;
+  int minY_analog_area = 40; // Leave space for text at the top
 
+  if (centerY + amplitude >= maxY) amplitude = maxY - 1 - centerY;
+  if (centerY - amplitude < minY_analog_area) amplitude = centerY - minY_analog_area;
+
+  if (amplitude < 1) amplitude = 1; 
   for (int x = 0; x < SCREEN_WIDTH; x++) {
     // Calculate the y-value for the sine wave relative to the center Y
     float yValue = amplitude * sin(2.0 * PI * frequency * (float)x / SCREEN_WIDTH) + centerY;
 
-    // Draw the point if it's within screen bounds
-    if (yValue >= 0 && yValue < SCREEN_HEIGHT) {
-      display.dot(x, (int)round(yValue), 1);
+    // Draw the point if it's within screen bounds and the analog area
+    if (yValue >= minY_analog_area && yValue < SCREEN_HEIGHT) {
+      tft.drawPixel(x, (int)round(yValue), WHITE); // Draw the pixel in white
     }
   }
 }
@@ -87,81 +102,85 @@ void drawDigitalStep(bool leftState, bool rightState) {
   int yCoordinate;
   String levelText = "OFF";
 
+  // Adjust Y coordinates for the new screen height
   switch (level) {
     case 1:
-      yCoordinate = SCREEN_HEIGHT - 15; // Level 1 slightly higher than base
+      yCoordinate = SCREEN_HEIGHT - 50; // Level 1 near the base
       levelText = "LOW";
       break;
     case 2:
-      yCoordinate = SCREEN_HEIGHT - 25; // Level 2 higher
-      levelText = "MID"; // Or just "HIGH" if only two levels used?
+      yCoordinate = SCREEN_HEIGHT - 70; // Level 2 higher
+      levelText = "MID";
       break;
     case 3:
-      yCoordinate = SCREEN_HEIGHT - 35; // Level 3 highest
+      yCoordinate = SCREEN_HEIGHT - 90; // Level 3 highest
       levelText = "HIGH";
       break;
     default:
-       // This case should technically not be hit if called correctly,
-       // but default to base level if something goes wrong.
       yCoordinate = BASE_Y_LEVEL;
       break;
   }
 
-  // Draw the horizontal line for the digital signal level
-  for (int x = 0; x < SCREEN_WIDTH; x++) {
-    display.dot(x, yCoordinate, 1);
-  }
+  tft.drawFastHLine(0, yCoordinate, SCREEN_WIDTH, GREEN);
+  tft.setCursor(0, 0);
+  tft.setTextColor(WHITE);
+  tft.setTextSize(2);
+  tft.println("Mode: Digital Step");
 
-  // Display Status Text for Digital Mode
-  display.setCursor(0, 0);
-  display.print("Mode: Digital Step");
-  display.setCursor(0, 1);
-  display.print("Level: "); display.print(levelText);
-  display.setCursor(0, 2);
-  display.print("L:"); display.print(leftState ? "ON " : "OFF");
-  display.print(" R:"); display.print(rightState ? "ON " : "OFF");
+  tft.setCursor(0, 20); // Move down for the next line
+  tft.print("Level: ");
+  tft.setTextColor(GREEN); // Color for the level text
+  tft.println(levelText);
+
+  tft.setCursor(0, 40); // Move down
+  tft.setTextColor(WHITE);
+  tft.print("L:");
+  tft.print(leftState ? "ON " : "OFF");
+  tft.print(" R:");
+  tft.println(rightState ? "ON " : "OFF");
 
 }
 
+int previousDigitalY = BASE_Y_LEVEL;
+float previousAmplitude = 0; // Initialize to a value that won't draw anything significant initially
+float previousFrequency = 0;
+
+
 void loop() {
-  // Read the switch states (Inverted due to INPUT_PULLUP)
+  // Read the switch states 
   bool leftSwitchState = !digitalRead(LEFT_SWITCH_PIN);
   bool rightSwitchState = !digitalRead(RIGHT_SWITCH_PIN);
 
-  // Clear the display buffer for the new frame
-  display.clear();
+  // Clear the display for the new frame
+  tft.fillScreen(BLACK);
 
   // --- Conditional Logic: Decide whether to show Analog or Digital ---
   if (!leftSwitchState && !rightSwitchState) {
     // --- ANALOG MODE: No switches pressed ---
 
     // Read amplitude & frequency from potentiometer
-    // Adjust ranges as needed for good visualization around BASE_Y_LEVEL
-    // Amplitude range should be small enough not to hit top/bottom easily
-    float amplitude = readPotentiometer(1.0, (SCREEN_HEIGHT - BASE_Y_LEVEL) * 0.8); // e.g., 1 to 8 (since base is 10 from bottom)
-    // Frequency: cycles across the screen width
-    float frequency = readPotentiometer(0.5, 6.0); // e.g., 0.5 to 6 cycles
+    float max_analog_amplitude = BASE_Y_LEVEL - 40; // Leave space for top text
+    if (max_analog_amplitude < 1) max_analog_amplitude = 1; // Ensure minimum amplitude range
+    float amplitude = readPotentiometer(1.0, max_analog_amplitude); 
+    float frequency = readPotentiometer(0.5, 10.0); // Adjusted frequency range for wider screen
 
     // Display Status Text for Analog Mode
-    display.setCursor(0, 0);
-    display.print("Mode: Analog Wave");
-    display.setCursor(0, 1); // Use second line for info
-    display.print("Frequency: "); display.print(frequency, 1); display.print(" cycles"); // 1 decimal place
+    tft.setCursor(0, 0);
+    tft.setTextColor(WHITE);
+    tft.setTextSize(2);
+    tft.println("Mode: Analog Wave");
 
-    // Draw the sine wave centered at the base digital level
+    tft.setCursor(0, 20); 
+    tft.print("Freq: ");
+    tft.setTextColor(BLUE); 
+    tft.print(frequency, 1); 
+    tft.println(" cycles");
+
+
     drawSineWave(amplitude, frequency, BASE_Y_LEVEL);
 
   } else {
     drawDigitalStep(leftSwitchState, rightSwitchState);
-
-    // Serial Debugging (Optional)
-    Serial.print("Digital - L: "); Serial.print(leftSwitchState);
-    Serial.print(", R: "); Serial.println(rightSwitchState);
   }
-
-  // Update the physical display with the buffer contents
-  display.update();
-
-  // Short delay for stability and responsiveness
-  delay(20);
+  delay(1);
 }
