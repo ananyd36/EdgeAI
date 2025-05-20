@@ -30,7 +30,8 @@ void setup() {
 
   Serial.begin(115200);
   tft.init(170,320);
-  tft.setRotation(3);  
+  tft.setRotation(3);
+  tft.fillScreen(BLACK);  
 
 
   if(!apds.begin()){
@@ -53,17 +54,10 @@ void loop() {
 
   apds.getColorData(&r, &g, &b, &c);
 
-  // Avoid division by zero and handle very low light explicitly
-  if (c < 3) {
-      c = 0; // Treat very low light as effectively zero for state comparison
-  }
-
-  float r_norm = (float)r / c; // This division might still be infinity/NaN if c was < 3 and set to 0
-  float g_norm = (float)g / c; // Handle if you need normalized values when c is truly 0
+  float r_norm = (float)r / c;
+  float g_norm = (float)g / c; 
   float b_norm = (float)b / c;
 
-  // Output normalized RGB for Edge Impulse (Optional - keep if needed)
-  // You might want to add a check here if c was 0 to avoid printing Inf/NaN
   if (c > 0) {
       Serial.print(r_norm, 4); Serial.print(",");
       Serial.print(g_norm, 4); Serial.print(",");
@@ -82,11 +76,11 @@ void loop() {
   // 2: FULL LIGHT (>= 10)
   int newLightState;
 
-  if (c < 3) { // Note: we handled c<3 by setting c=0 above, but using the original threshold logic here
+  if (c < 3) {
     newLightState = 0; // DARK
-  } else if (c >= 3 && c < 10) { // Using >= 3 for clarity on thresholds
+  } else if (c >= 3 && c < 10) {
     newLightState = 1; // MEDIUM LIGHT
-  } else { // c >= 10
+  } else {
     newLightState = 2; // FULL LIGHT
   }
 
@@ -96,10 +90,7 @@ void loop() {
     // The light state has changed, update the display
 
     // First, clear the area where the previous text was displayed.
-    // TextSize 4 makes characters about 32 pixels high. Clear a bit more.
     tft.fillRect(0, 0, tft.width(), 35, BLACK);
-
-    // Now, set up for drawing the new text
     tft.setTextSize(4);
     tft.setTextColor(WHITE);
     tft.setCursor(0, 0);

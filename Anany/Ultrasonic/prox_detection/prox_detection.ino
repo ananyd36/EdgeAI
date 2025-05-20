@@ -8,15 +8,31 @@
 
 
 #include <Proximity_Motion_Detection_inferencing.h>                // Unified sensor interface used by Adafruit libraries
-#include <GyverOLED.h>
+// #include <GyverOLED.h>
+#include <Wire.h>
+#include <VL53L0X.h>
+#include <Adafruit_GFX.h>    // Core graphics library
+#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+
+#define TFT_CS   33  // Chip Select control pin
+#define TFT_DC    25  // Data/Command select pin
+#define TFT_RST   26  // Reset pin (or connect to RST, see below)
+
+#define BLACK   0x0000
+#define WHITE   0xFFFF
+#define BLUE    0x001F
+#define GREEN   0x07E0
+#define RED     0xF800
+
+VL53L0X sensor;
 
 const int trigPin = 33 ;
 const int echoPin = 32 ;
 
 
 //define sound speed in cm/uS
-#define SOUND_SPEED 0.034
-#define CM_TO_INCH 0.393701
+// #define SOUND_SPEED 0.034
+// #define CM_TO_INCH 0.393701
 
 
 long duration;
@@ -26,8 +42,9 @@ float distanceCm;
 #define FREQUENCY_HZ 9                          // Sampling rate: 60 times per second
 #define INTERVAL_MS (1000 / (FREQUENCY_HZ + 1))  // Time between samples in milliseconds
 
-// === Initialize Sensor and Buffer Variables ===
-GyverOLED<SSH1106_128x64> display;
+// GyverOLED<SSH1106_128x64> display;
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+
 
 float features[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];  // Buffer to store sampled features
 size_t feature_ix = 0;                               // Current index in the features buffer
@@ -39,9 +56,23 @@ const unsigned long thresholdTime = 500;
 
 void setup() {
   Serial.begin(115200);  // Initialize serial communication at 115200 baud
-  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
-    display.init();
+  // pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+  // pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+    Wire.begin();
+  tft.init(170,320);
+  tft.setRotation(3);  
+  sensor.setTimeout(500);
+  if (!sensor.init())
+  {
+    Serial.println("Failed to detect and initialize sensor!");
+    while (1) {}
+  }
+
+  // Start continuous back-to-back mode (take readings as
+  // fast as possible).  To use continuous timed mode
+  // instead, provide a desired inter-measurement period in
+  // ms (e.g. sensor.startContinuous(100)).
+  sensor.startContinuous();
   
   // Show Edge Impulse model input size and label count
   Serial.print("Features: ");
@@ -57,18 +88,21 @@ void loop() {
   if (millis() > last_interval_ms + INTERVAL_MS) {
     last_interval_ms = millis();  // Update timestamp
     // Clears the trigPin
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  // Sets the trigPin on HIGH state for 10 micro seconds
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
+  // digitalWrite(trigPin, LOW);
+  // delayMicroseconds(2);
+  // // Sets the trigPin on HIGH state for 10 micro seconds
+  // digitalWrite(trigPin, HIGH);
+  // delayMicroseconds(10);
+  // digitalWrite(trigPin, LOW);
   
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  duration = pulseIn(echoPin, HIGH);
+  // // Reads the echoPin, returns the sound wave travel time in microseconds
+  // duration = pulseIn(echoPin, HIGH);
   
-  // Calculate the distance
-  distanceCm = duration * SOUND_SPEED/2;
+  // // Calculate the distance
+  // distanceCm = duration * SOUND_SPEED/2;
+  uint16_t distanceCm;
+
+  distanceCm = sensor.readRangeContinuousMillimeters() / 10;
 
   // Store acceleration data into features buffer
   features[feature_ix++] = distanceCm;
@@ -137,16 +171,18 @@ void loop() {
         label = "TOO CLOSE";
     }
     label.toUpperCase();    // Display the current label on the OLED if it has been consistent for more than 2 seconds
-    display.clear();
-    display.setScale(2);
-    display.setCursor(0, 0);
-    display.println(label);
-    display.setCursor(0, 3);
-    display.setScale(1);
-    display.print("Confidence : ");
-    display.print((highestProbability)*100);
-    display.println("%");
-    display.update();
+    tft.fillScreen(ST77XX_BLACK); 
+
+    tft.setCursor(0, 0);       
+    tft.setTextSize(4);        
+    tft.setTextColor(ST77XX_WHITE); 
+    tft.println(label);       
+
+    tft.setCursor(0, 50);      
+    tft.setTextSize(3);        
+    tft.print("Confidence:"); 
+    tft.print((highestProbability) * 100); 
+    tft.println("%");
 
     // Debug: Print the current label and the status
     Serial.print("Current Label: ");

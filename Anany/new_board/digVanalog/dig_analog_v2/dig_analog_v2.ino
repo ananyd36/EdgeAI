@@ -93,10 +93,9 @@ void drawSineWave(float amplitude, float frequency, int centerY) {
 
 // Function to draw the digital step function line and associated text
 void drawDigitalStep(bool leftState, bool rightState) {
-  int level = 0; // 0 = Both OFF (base level handled by analog wave)
+  int level = 1;
   if (leftState && !rightState) level = 1;  // Left ON only
   if (!leftState && rightState) level = 2;  // Right ON only
-  if (leftState && rightState) level = 3;  // Both ON
 
   // Calculate the Y coordinate for the step function line based on level
   int yCoordinate;
@@ -105,19 +104,12 @@ void drawDigitalStep(bool leftState, bool rightState) {
   // Adjust Y coordinates for the new screen height
   switch (level) {
     case 1:
-      yCoordinate = SCREEN_HEIGHT - 50; // Level 1 near the base
-      levelText = "LOW";
+      yCoordinate = SCREEN_HEIGHT - 30; // Level 1 near the base
+      levelText = "0";
       break;
     case 2:
       yCoordinate = SCREEN_HEIGHT - 70; // Level 2 higher
-      levelText = "MID";
-      break;
-    case 3:
-      yCoordinate = SCREEN_HEIGHT - 90; // Level 3 highest
-      levelText = "HIGH";
-      break;
-    default:
-      yCoordinate = BASE_Y_LEVEL;
+      levelText = "1";
       break;
   }
 
@@ -127,17 +119,19 @@ void drawDigitalStep(bool leftState, bool rightState) {
   tft.setTextSize(2);
   tft.println("Mode: Digital Step");
 
-  tft.setCursor(0, 20); // Move down for the next line
-  tft.print("Level: ");
-  tft.setTextColor(GREEN); // Color for the level text
-  tft.println(levelText);
-
-  tft.setCursor(0, 40); // Move down
+  tft.setCursor(0, 20); // Move down
   tft.setTextColor(WHITE);
   tft.print("L:");
   tft.print(leftState ? "ON " : "OFF");
   tft.print(" R:");
   tft.println(rightState ? "ON " : "OFF");
+
+  tft.setCursor(120, 50); // Move down for the next line
+  tft.print("LEVEL: ");
+  tft.setTextColor(GREEN); // Color for the level text
+  tft.println(levelText);
+
+
 
 }
 
